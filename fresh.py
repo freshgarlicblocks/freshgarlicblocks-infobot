@@ -7,23 +7,32 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 import datetime
 from datetime import timedelta
 import statistics
-import pytz
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DISCORD_BLOCK_NOTIFICATION_CHANNEL_ID=os.getenv('DISCORD_BLOCK_NOTIFICATION_CHANNEL_ID')
+DISCORD_TOKEN=os.getenv('DISCORD_TOKEN')
+DISCORD_PRESENCE=os.getenv('DISCORD_PRESENCE')
+FRESHGRLC_API=os.getenv('FRESHGRLC_API')
+JSON_RPC_SERVER=os.getenv('JSON_RPC_SERVER')
 
 client = discord.Client()
 
-timeLastBlock = datetime.datetime.now(pytz.timezone("America/New_York"))
+timeLastBlock = datetime.datetime.now()
 
 async def background():
     await client.wait_until_ready()
-    await client.change_presence(game=discord.Game(name='Mining Simulator'))
+    await client.change_presence(game=discord.Game(name=DISCORD_PRESENCE))
     while not client.is_closed:
         await asyncio.sleep(120)
 
 @client.event
 async def on_message(message):
-    if message.channel.id == '405494481513873420':
+    if message.channel.id == DISCORD_BLOCK_NOTIFICATION_CHANNEL_ID:
         global timeLastBlock
-        timeLastBlock = datetime.datetime.now(pytz.timezone("America/New_York"))
+        timeLastBlock = datetime.datetime.now()
         return
     if message.content.split(' ')[0] == '!info':
         words = '''```Block Height: [bHeight]
@@ -42,18 +51,18 @@ Time Since Last Block: [timeSince]```'''
                 response = await r.text()
                 nHash = round(float(response)/1000000000, 2)
                 words = words.replace('[nHash]', str(nHash))
-        access = AuthServiceProxy("http://garlicoin:garlicoin@127.0.0.1:42070")
+        access = AuthServiceProxy(JSON_RPC_SERVER)
         blockChainInfo = access.getblockchaininfo()
         words = words.replace('[bHeight]', str(blockChainInfo['blocks']))
         words = words.replace('[difficulty]', str(round(blockChainInfo['difficulty'], 2)))
-        async with aiohttp.get('https://www.freshgarlicblocks.net/api/poolstats/noheights') as r:
+        async with aiohttp.get(FRESHGRLC_API + '/poolstats/noheights') as r:
             if r.status == 200:
                 response = await r.json()
                 pHash = round(float(response['averageHashrate'])/1000000000, 2)
                 words = words.replace('[pHash]', str(pHash))
                 words = words.replace('[workers]', str(response['workers']))
         words = words.replace('[percentage]', str(round(pHash/nHash * 100, 2)))
-        async with aiohttp.get('https://www.freshgrlc.net/api/luck') as r:
+        async with aiohttp.get(FRESHGRLC_API + '/luck') as r:
             if r.status == 200:
                 response = await r.json()
                 luckArray = []
@@ -61,7 +70,7 @@ Time Since Last Block: [timeSince]```'''
                     luckArray.append(blocks['luck'])
                 aLuck = round(statistics.mean(luckArray)* 100, 2)
                 words = words.replace('[aLuck]', str(aLuck))
-        d = datetime.datetime.now(pytz.timezone("America/New_York")) - timeLastBlock
+        d = datetime.datetime.now() - timeLastBlock
         dString = str(d)
         dString = dString[:dString.find('.')]
         words = words.replace('[timeSince]', dString)
@@ -69,4 +78,4 @@ Time Since Last Block: [timeSince]```'''
 
 
 client.loop.create_task(background())
-client.run('secret')
+client.run(DISCORD_TOKEN)
