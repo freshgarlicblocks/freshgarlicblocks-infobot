@@ -69,4 +69,4 @@ Time Since Last Block: [timeSince]```'''
 
 
 client.loop.create_task(background())
-client.run('NDA1MTcwOTQ3MjIyNjY3MjY1.DUggXA.6XXOqkbdRuAEBEXbJqEXN-rzVvc')
+client.run('secret')
