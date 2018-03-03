@@ -13,11 +13,22 @@ from dotenv import load_dotenv
 from config import *
 
 
+MESSAGE_TEMPLATE = '''```Block Height: [b_height]
+Difficulty: [difficulty]
+Network Hashrate: [n_hash] GH/s
+
+Pool Hashrate: [p_hash] GH/s | [percentage]%
+Pool Workers: [workers]
+Pool Average Luck: [a_luck]%
+
+Time Since Last Block: [time_since]```'''
+
+
 class Bot(discord.Client):
 
     def __init__(self, reset_channel_id):
         super().__init__()
-        self.timeLastBlock = datetime.datetime.now()
+        self.time_last_block = datetime.datetime.now()
         self.reset_channel_id = reset_channel_id
 
     async def on_ready(self):
@@ -25,48 +36,48 @@ class Bot(discord.Client):
 
     async def on_message(self, message):
         if message.channel.id == self.reset_channel_id:
-            self.timeLastBlock = datetime.datetime.now()
+            self.time_last_block = datetime.datetime.now()
             return
+
         if message.content.split(' ')[0] == '!info':
-            words = '''```Block Height: [bHeight]
-    Difficulty: [difficulty]
-    Network Hashrate: [nHash] GH/s
+            words = MESSAGE_TEMPLATE
+            n_hash = 1
+            p_hash = 1
 
-    Pool Hashrate: [pHash] GH/s | [percentage]%
-    Pool Workers: [workers]
-    Pool Average Luck: [aLuck]%
-
-    Time Since Last Block: [timeSince]```'''
-            nHash = 1
-            pHash = 1
             async with aiohttp.get('https://garli.co.in/api/getnetworkhashps') as r:
                 if r.status == 200:
                     response = await r.text()
-                    nHash = round(float(response)/1e9, 2)
-                    words = words.replace('[nHash]', str(nHash))
+                    n_hash = round(float(response) / 1e9, 2)
+                    words = words.replace('[n_hash]', str(n_hash))
+
             access = AuthServiceProxy(JSON_RPC_ADDRESS)
-            blockChainInfo = access.getblockchaininfo()
-            words = words.replace('[bHeight]', str(blockChainInfo['blocks']))
-            words = words.replace('[difficulty]', str(round(blockChainInfo['difficulty'], 2)))
+            blockchain_info = access.getblockchaininfo()
+            words = words.replace('[b_height]', str(blockchain_info['blocks']))
+            words = words.replace('[difficulty]', str(round(blockchain_info['difficulty'], 2)))
+
             async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/poolstats/noheights') as r:
                 if r.status == 200:
                     response = await r.json()
-                    pHash = round(float(response['averageHashrate'])/1e9, 2)
-                    words = words.replace('[pHash]', str(pHash))
+                    p_hash = round(float(response['averageHashrate']) / 1e9, 2)
+                    words = words.replace('[p_hash]', str(p_hash))
                     words = words.replace('[workers]', str(response['workers']))
-            words = words.replace('[percentage]', str(round(pHash/nHash * 100, 2)))
+
+            words = words.replace('[percentage]', str(round(p_hash / n_hash * 100, 2)))
+
             async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/luck') as r:
                 if r.status == 200:
                     response = await r.json()
-                    luckArray = []
+                    luck_array = []
                     for blocks in response:
-                        luckArray.append(blocks['luck'])
-                    aLuck = round(statistics.mean(luckArray)* 100, 2)
-                    words = words.replace('[aLuck]', str(aLuck))
-            d = datetime.datetime.now() - self.timeLastBlock
-            dString = str(d)
-            dString = dString[:dString.find('.')]
-            words = words.replace('[timeSince]', dString)
+                        luck_array.append(blocks['luck'])
+                    a_luck = round(statistics.mean(luck_array) * 100, 2)
+                    words = words.replace('[a_luck]', str(a_luck))
+
+            d = datetime.datetime.now() - self.time_last_block
+            d_string = str(d)
+            d_string = d_string[:d_string.find('.')]
+            words = words.replace('[time_since]', d_string)
+
             await self.send_message(message.channel, words)
 
 
