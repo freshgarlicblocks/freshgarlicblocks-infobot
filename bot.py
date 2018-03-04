@@ -28,10 +28,11 @@ Time Since Last Block: [time_since]'''
 CMC_MESSAGE_TEMPLATE = '''**Rank:** [rank]
 **Price:** $[price_usd] / [price_btc] BTC
 **Market Cap:** $[market_cap_usd]
-**Circulating Supply:** [available_supply] [symbol]
-'''
+**Circulating Supply:** [available_supply] [symbol]'''
 
-
+WORKER_INFO_MESSAGE_TEMPLATE = '''Expected Payout per Block: [expected_payout] GRLC
+Estimated Hashrate: [worker_hashrate] MH/s
+Percentage of Pool: [worker_percentage]%'''
 
 class Bot(discord.Client):
 
@@ -43,6 +44,7 @@ class Bot(discord.Client):
         self.time_last_block = datetime.datetime.now()
         self.reset_channel_id = reset_channel_id
         self.coin_icon_cache = {}
+        self.users = {'OrangeDrangon#6334': {'address': '123'}}
 
     async def on_ready(self):
         await self.change_presence(game=discord.Game(name=DISCORD_PRESENCE))
@@ -141,6 +143,39 @@ class Bot(discord.Client):
 
             await self.send_message(message.channel, embed=embed)
 
+        if split_msg[0] == '!myinfo':
+            msg = WORKER_INFO_MESSAGE_TEMPLATE
+            try:
+                user = self.users[str(message.author)]
+                async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/workerinfo/' + user['address']) as r:
+                    if r.status == 200:
+                        data = await r.json()
+                        expected_payout = data['nextpayout']['grlc']
+                        worker_hashrate = round(float(data['hashrate']) / 1e6, 2)
+                        worker_percentage = round(data['nextpayout']['percentage'], 2)
+                        msg = msg.replace('[expected_payout]', str(expected_payout))
+                        msg = msg.replace('[worker_hashrate]', str(worker_hashrate))
+                        msg = msg.replace('[worker_percentage]', str(worker_percentage))
+
+                    elif r.status == 500:
+                        msg = 'Error, your address is not currently mining!'
+
+                    else:
+                        self.RequestError('Error retreiving worker information')
+                        return
+
+            except KeyError:
+                msg = '''Error, your address is not set!
+
+Please set it with: `!register <address>`'''
+            embed = discord.Embed()
+            embed.set_author(
+                name=message.author.display_name + "'s Info")
+            embed.description = msg
+
+            await self.send_message(message.channel, embed=embed)
+            return
+
     def coin_url(self, coin_id):
         return 'https://coinmarketcap.com/currencies/%s/' % coin_id
 
@@ -158,7 +193,6 @@ class Bot(discord.Client):
                     return
 
         return self.coin_icon_cache.get(coin_id)
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
