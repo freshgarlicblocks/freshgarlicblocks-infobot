@@ -49,7 +49,7 @@ class Bot(discord.Client):
         j = 0
 
         while j < 2:
-            j++
+            j += 1
             db_shelve = shelve.open('db')
             try:
                 self.users = db_shelve['users']
