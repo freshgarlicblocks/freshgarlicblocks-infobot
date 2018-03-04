@@ -1,2 +1,7 @@
 .env
 config.py
+*.pyc
+*.bat
+*.bak
+*.dat
+*.dir
