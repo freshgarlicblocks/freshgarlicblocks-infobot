@@ -37,8 +37,7 @@ class Bot(discord.Client):
 
     class RequestError(Exception):
         pass
-        
->>>>>>> 42bc41c6388c70f61440abd8b690a6e9a0cc0864
+
     def __init__(self, reset_channel_id):
         super().__init__()
         self.time_last_block = datetime.datetime.now()
