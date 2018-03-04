@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from config import *
 
 
-INFO_MESSAGE_TEMPLATE = '''```Block Height: [block_height]
+INFO_MESSAGE_TEMPLATE = '''Block Height: [block_height]
 Difficulty: [difficulty]
 Network Hashrate: [network_hashrate] GH/s
 
@@ -22,7 +22,7 @@ Pool Hashrate: [pool_hashrate] GH/s | [percentage]%
 Pool Workers: [workers]
 Pool Average Luck: [avg_luck]%
 
-Time Since Last Block: [time_since]```'''
+Time Since Last Block: [time_since]'''
 
 
 CMC_MESSAGE_TEMPLATE = '''**Rank:** [rank]
@@ -55,7 +55,7 @@ class Bot(discord.Client):
             return
 
         if split_msg[0] == '!info':
-            words = INFO_MESSAGE_TEMPLATE
+            msg = INFO_MESSAGE_TEMPLATE
             network_hashrate = 1
             pool_hashrate = 1
 
@@ -63,21 +63,29 @@ class Bot(discord.Client):
                 if r.status == 200:
                     data = await r.text()
                     network_hashrate = round(float(data) / 1e9, 2)
-                    words = words.replace('[network_hashrate]', str(network_hashrate))
+                    msg = msg.replace('[network_hashrate]', str(network_hashrate))
+
+                else:
+                    self.RequestError('Error retreiving network hashrate')
+                    return
 
             access = AuthServiceProxy(JSON_RPC_ADDRESS)
             blockchain_info = access.getblockchaininfo()
-            words = words.replace('[block_height]', str(blockchain_info['blocks']))
-            words = words.replace('[difficulty]', str(round(blockchain_info['difficulty'], 2)))
+            msg = msg.replace('[block_height]', str(blockchain_info['blocks']))
+            msg = msg.replace('[difficulty]', str(round(blockchain_info['difficulty'], 2)))
 
             async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/poolstats/noheights') as r:
                 if r.status == 200:
                     data = await r.json()
                     pool_hashrate = round(float(data['averageHashrate']) / 1e9, 2)
-                    words = words.replace('[pool_hashrate]', str(pool_hashrate))
-                    words = words.replace('[workers]', str(data['workers']))
+                    msg = msg.replace('[pool_hashrate]', str(pool_hashrate))
+                    msg = msg.replace('[workers]', str(data['workers']))
 
-            words = words.replace('[percentage]', str(round(pool_hashrate / network_hashrate * 100, 2)))
+                else:
+                    self.RequestError('Error retreiving pool pool hashrate and worker count')
+                    return
+
+            msg = msg.replace('[percentage]', str(round(pool_hashrate / network_hashrate * 100, 2)))
 
             async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/luck') as r:
                 if r.status == 200:
@@ -86,14 +94,23 @@ class Bot(discord.Client):
                     for blocks in data:
                         luck_array.append(blocks['luck'])
                     avg_luck = round(statistics.mean(luck_array) * 100, 2)
-                    words = words.replace('[avg_luck]', str(avg_luck))
+                    msg = msg.replace('[avg_luck]', str(avg_luck))
+
+                else:
+                    self.RequestError('Error retreiving pool pool luck')
+                    return
 
             time_diff = datetime.datetime.now() - self.time_last_block
             time_since = str(time_diff)
             time_since = time_since[:time_since.find('.')]
-            words = words.replace('[time_since]', time_since)
+            msg = msg.replace('[time_since]', time_since)
 
-            await self.send_message(message.channel, words)
+            embed = discord.Embed()
+            embed.set_author(
+                name='Fresh Garlic Blocks Info')
+            embed.description = msg
+
+            await self.send_message(message.channel, embed=embed)
             return
 
         if split_msg[0] == '!cmc':
@@ -138,6 +155,8 @@ class Bot(discord.Client):
                         self.coin_icon_cache[coin_id] = match.group(1)
                 else:
                     raise self.RequestError('Error retreiving coin icon')
+                    return
+
         return self.coin_icon_cache.get(coin_id)
 
 
