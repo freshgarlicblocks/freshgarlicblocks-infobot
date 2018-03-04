@@ -35,6 +35,10 @@ WORKER_INFO_MESSAGE_TEMPLATE = '''Expected Payout per Block: [expected_payout] G
 Estimated Hashrate: [worker_hashrate] MH/s
 Percentage of Pool: [worker_percentage]%'''
 
+ADDRESS_SET_ERROR_MESSAGE = '''Error, your address is not set!
+
+Please set it with: `!register <address>`'''
+
 class Bot(discord.Client):
 
     class RequestError(Exception):
@@ -46,10 +50,9 @@ class Bot(discord.Client):
         self.reset_channel_id = reset_channel_id
         self.coin_icon_cache = {}
 
-        j = 0
-
-        while j < 2:
-            j += 1
+        loop_break = 0
+        while loop_break < 2:
+            loop_break += 1
             db_shelve = shelve.open('db')
             try:
                 self.users = db_shelve['users']
@@ -184,9 +187,8 @@ class Bot(discord.Client):
                         return
 
             except KeyError:
-                msg = '''Error, your address is not set!
+                msg = ADDRESS_SET_ERROR_MESSAGE
 
-Please set it with: `!register <address>`'''
             embed = discord.Embed()
             embed.set_author(
                 name=message.author.display_name + "'s Info")
