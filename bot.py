@@ -1,5 +1,6 @@
 import datetime
 import json
+import shelve
 import logging
 import re
 import statistics
@@ -45,6 +46,19 @@ class Bot(discord.Client):
         self.reset_channel_id = reset_channel_id
         self.coin_icon_cache = {}
         self.users = {}
+
+        while True:
+            try:
+                users_file = open('users.json', 'r')
+                self.users = json.loads(users_file.read())
+                users_file.close()
+                break
+            except Exception:
+                users_file = open('users.json','w+')
+                users_file.write('{}')
+                users_file.close()
+                continue
+
 
     async def on_ready(self):
         await self.change_presence(game=discord.Game(name=DISCORD_PRESENCE))
@@ -148,6 +162,7 @@ class Bot(discord.Client):
 
         if split_msg[0] == '!myinfo':
             msg = WORKER_INFO_MESSAGE_TEMPLATE
+            print(self.users[str(message.author)])
             try:
                 user = self.users[str(message.author)]
                 async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/workerinfo/' + user['address']) as r:
@@ -175,7 +190,7 @@ Please set it with: `!register <address>`'''
             embed.set_author(
                 name=message.author.display_name + "'s Info")
             embed.description = msg
-            embed.color = discord.Color(0xffa517)!
+            embed.color = discord.Color(0xffa517)
 
             await self.send_message(message.channel, embed=embed)
             return
