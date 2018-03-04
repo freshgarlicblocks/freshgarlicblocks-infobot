@@ -2,4 +2,6 @@
 config.py
 *.pyc
 *.bat
-*.json
+*.bak
+*.dat
+*.dir

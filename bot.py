@@ -4,6 +4,7 @@ import logging
 import re
 import statistics
 import os
+import shelve
 
 import aiohttp
 import asyncio
@@ -44,18 +45,19 @@ class Bot(discord.Client):
         self.time_last_block = datetime.datetime.now()
         self.reset_channel_id = reset_channel_id
         self.coin_icon_cache = {}
-        self.users = {}
 
-        while True:
+        j = 0
+
+        while j < 2:
+            j++
+            db_shelve = shelve.open('db')
             try:
-                users_file = open('users.json', 'r')
-                self.users = json.loads(users_file.read())
-                users_file.close()
+                self.users = db_shelve['users']
+                db_shelve.close()
                 break
-            except Exception:
-                users_file = open('users.json','w+')
-                users_file.write('{}')
-                users_file.close()
+            except KeyError:
+                db_shelve['users'] = {}
+                db_shelve.close()
                 continue
 
 
