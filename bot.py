@@ -31,7 +31,9 @@ CMC_MESSAGE_TEMPLATE = '''**Rank:** [rank]
 **Market Cap:** $[market_cap_usd]
 **Circulating Supply:** [available_supply] [symbol]'''
 
-WORKER_INFO_MESSAGE_TEMPLATE = '''Expected Payout per Block: [expected_payout] GRLC
+WORKER_INFO_MESSAGE_TEMPLATE = '''Address: [address]
+
+Expected Payout per Block: [expected_payout] GRLC
 Estimated Hashrate: [worker_hashrate] MH/s
 Percentage of Pool: [worker_percentage]%'''
 
@@ -166,9 +168,9 @@ class Bot(discord.Client):
 
         if split_msg[0] == '!myinfo':
             msg = WORKER_INFO_MESSAGE_TEMPLATE
-            print(self.users[str(message.author)])
             try:
                 user = self.users[str(message.author)]
+                msg = msg.replace('[address]', user['address'])
                 async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/workerinfo/' + user['address']) as r:
                     if r.status == 200:
                         data = await r.json()
@@ -198,6 +200,26 @@ class Bot(discord.Client):
             await self.send_message(message.channel, embed=embed)
             return
 
+        if split_msg[0] == '!register':
+            address = 'invalid'
+            access = AuthServiceProxy(JSON_RPC_ADDRESS)
+            if len(split_msg) > 1 and access.validateaddress(split_msg[1])['isvalid']:
+                address = split_msg[1]
+                self.users[str(message.author)] = {'address': address}
+
+                db_shelve = shelve.open('db')
+                db_shelve['users'] = self.users
+                db_shelve.close()
+
+                embed = discord.Embed()
+                embed.set_author(
+                    name=message.author.display_name + ' Registered')
+                embed.description = 'You are now registered! Use`!myinfo` to see information about yourself!'
+                embed.color = discord.Color(0xffa517)
+
+                await self.send_message(message.channel, embed=embed)
+                return
+
     def coin_url(self, coin_id):
         return 'https://coinmarketcap.com/currencies/%s/' % coin_id
 
@@ -206,7 +228,7 @@ class Bot(discord.Client):
             async with aiohttp.get(self.coin_url(coin_id)) as r:
                 if r.status == 200:
                     html = await r.text()
-                    # https://stackoverflow.com/a/1732454/69713
+                    # see https://stackoverflow.com/a/1732454/69713
                     match = re.search(r'href="([^"]+/img/coins/32x32/[^"]+)"', html)
                     if match:
                         self.coin_icon_cache[coin_id] = match.group(1)
