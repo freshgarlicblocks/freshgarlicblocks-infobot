@@ -32,7 +32,6 @@ CMC_MESSAGE_TEMPLATE = '''**Rank:** [rank]
 **Circulating Supply:** [available_supply] [symbol]'''
 
 WORKER_INFO_MESSAGE_TEMPLATE = '''Address: [address]
-Balance: [balance]
 
 Expected Payout per Block: [expected_payout] GRLC
 Estimated Hashrate: [worker_hashrate] MH/s
@@ -172,17 +171,6 @@ class Bot(discord.Client):
             try:
                 user = self.users[str(message.author)]
                 msg = msg.replace('[address]', user['address'])
-
-                async with aiohttp.get('https://garlicinsight.com/insight-grlc-api/addr/' + user['address']) as r:
-                    if r.status == 200:
-                        data = await r.json()
-                        balance = data['balance']
-                        msg = msg.replace('[balance]', str(balance))
-
-                    else:
-                        self.RequestError('Error retreiving worker balance')
-                        return
-
                 async with aiohttp.get(FRESHGRLC_API_ADDRESS + '/workerinfo/' + user['address']) as r:
                     if r.status == 200:
                         data = await r.json()
