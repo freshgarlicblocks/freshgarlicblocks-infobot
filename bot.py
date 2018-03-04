@@ -31,13 +31,11 @@ CMC_MESSAGE_TEMPLATE = '''**Rank:** [rank]
 **Circulating Supply:** [available_supply] [symbol]
 '''
 
-
-
 class Bot(discord.Client):
 
     class RequestError(Exception):
         pass
-
+      
     def __init__(self, reset_channel_id):
         super().__init__()
         self.time_last_block = datetime.datetime.now()
@@ -110,6 +108,7 @@ class Bot(discord.Client):
                         msg = msg.replace('[%s]' % prop, str(coin[prop]))
                 else:
                     raise self.RequestError('Error retreiving coin properties')
+
                     return
 
             coin_icon = await self.get_coin_icon(coin_id)
@@ -136,8 +135,10 @@ class Bot(discord.Client):
                     match = re.search(r'href="([^"]+/img/coins/32x32/[^"]+)"', html)
                     if match:
                         self.coin_icon_cache[coin_id] = match.group(1)
+                        
                 else:
                     raise self.RequestError('Error retreiving coin icon')
+
         return self.coin_icon_cache.get(coin_id)
 
 
