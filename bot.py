@@ -111,6 +111,7 @@ class Bot(discord.Client):
             embed.set_author(
                 name='Fresh Garlic Blocks Info')
             embed.description = msg
+            embed.color = discord.Color(0xffa517)
 
             await self.send_message(message.channel, embed=embed)
             return
@@ -140,8 +141,10 @@ class Bot(discord.Client):
                 url=self.coin_url(coin_id),
                 icon_url=coin_icon)
             embed.description = msg
+            embed.color = discord.Color(0xffa517)
 
             await self.send_message(message.channel, embed=embed)
+            return
 
         if split_msg[0] == '!myinfo':
             msg = WORKER_INFO_MESSAGE_TEMPLATE
@@ -172,6 +175,7 @@ Please set it with: `!register <address>`'''
             embed.set_author(
                 name=message.author.display_name + "'s Info")
             embed.description = msg
+            embed.color = discord.Color(0xffa517)!
 
             await self.send_message(message.channel, embed=embed)
             return
