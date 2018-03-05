@@ -187,14 +187,17 @@ class Bot(discord.Client):
                     if r.status == 200:
                         data = await r.json()
                         expected_payout = data['nextpayout']['grlc']
-                        worker_hashrate = round(float(data['hashrate']) / 1e6, 2)
+                        worker_hashrate = data['hashrate']
                         worker_percentage = round(data['nextpayout']['percentage'], 2)
+                        if worker_hashrate is None:
+                            worker_hashrate = 0
+
+                        else:
+                            worker_hashrate = round(float(worker_hashrate) / 1e6, 2)
+
                         msg = msg.replace('[expected_payout]', str(expected_payout))
                         msg = msg.replace('[worker_hashrate]', str(worker_hashrate))
                         msg = msg.replace('[worker_percentage]', str(worker_percentage))
-
-                    elif r.status == 500:
-                        msg = 'Error, your address is not currently mining!'
 
                     else:
                         self.RequestError('Error retreiving worker information')
@@ -213,10 +216,9 @@ class Bot(discord.Client):
             return
 
         if split_msg[0] == '!register':
-            address = 'invalid'
+            address = split_msg[1]
             access = AuthServiceProxy(JSON_RPC_ADDRESS)
-            if len(split_msg) > 1 and access.validateaddress(split_msg[1])['isvalid']:
-                address = split_msg[1]
+            if len(split_msg) > 1 and access.validateaddress(address)['isvalid']:
                 self.users[str(message.author)] = {'address': address}
 
                 db_shelve = shelve.open('db')
