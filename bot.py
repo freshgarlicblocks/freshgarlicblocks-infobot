@@ -139,8 +139,12 @@ class Bot(discord.Client):
 
         if split_msg[0] == '!cmc':
             coin_id = 'garlicoin'
-            if len(split_msg) > 1 and split_msg[1].isalnum():
-                coin_id = split_msg[1]
+            if len(split_msg) > 1:
+                if bool(re.match('^[a-zA-Z0-9_-]+$', split_msg[1])):
+                    coin_id = split_msg[1]
+                else:
+                    # No message if an invalid coin is specified.
+                    return
 
             msg = CMC_MESSAGE_TEMPLATE
             async with aiohttp.get('https://api.coinmarketcap.com/v1/ticker/%s/' % coin_id) as r:
